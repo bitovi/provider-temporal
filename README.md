@@ -222,27 +222,6 @@ tests, local package deploy on kind). It uploads `_output` artifacts; it does
 
 ---
 
-## Install into bitovi-platform-services
-
-After a tag exists on GHCR:
-
-1. Add a GitOps `Provider` (same as other providers):
-
-```yaml
-apiVersion: pkg.crossplane.io/v1
-kind: Provider
-metadata:
-  name: provider-temporalcloud
-spec:
-  package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
-```
-
-2. ProviderConfig wired to your Temporal API key Secret.
-3. Optionally cut platform Composition from `provider-terraform` Workspace to
-   this Namespace managed resource.
-
----
-
 ## Local development (last)
 
 Use this when hacking on the controller without publishing.
