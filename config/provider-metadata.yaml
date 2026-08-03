@@ -1,0 +1,1103 @@
+name: temporalio/temporalcloud
+resources:
+    temporalcloud_account_audit_log_sink:
+        subCategory: ""
+        description: Provisions an account audit log sink.
+        name: temporalcloud_account_audit_log_sink
+        title: temporalcloud_account_audit_log_sink Resource - terraform-provider-temporalcloud
+        examples:
+            - name: kinesis_sink
+              manifest: |-
+                {
+                  "enabled": true,
+                  "kinesis": {
+                    "destination_uri": "arn:aws:kinesis:us-east-1:123456789012:stream/my-audit-stream",
+                    "region": "us-east-1",
+                    "role_name": "arn:aws:iam::123456789012:role/TemporalCloudKinesisRole"
+                  },
+                  "sink_name": "my-kinesis-sink"
+                }
+            - name: pubsub_sink
+              manifest: |-
+                {
+                  "enabled": true,
+                  "pubsub": {
+                    "gcp_project_id": "my-gcp-project",
+                    "service_account_id": "my-service-account-id",
+                    "topic_name": "temporal-audit-logs"
+                  },
+                  "sink_name": "my-pubsub-sink"
+                }
+        argumentDocs:
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            destination_uri: (String) The destination URI of the Kinesis stream where Temporal will send data.
+            enabled: (Boolean) A flag indicating whether the audit log sink is enabled or not.
+            gcp_project_id: (String) The GCP project ID of the PubSub topic and service account.
+            id: (String) The unique identifier of the account audit log sink.
+            kinesis: (Attributes) The Kinesis configuration details when destination_type is Kinesis. (see below for nested schema)
+            pubsub: (Attributes) The PubSub configuration details when destination_type is PubSub. (see below for nested schema)
+            region: (String) The region of the Kinesis stream.
+            role_name: (String) The IAM role that Temporal Cloud assumes for writing records to the customer's Kinesis stream.
+            service_account_email: (String) The service account email associated with the PubSub topic and service account.
+            service_account_id: (String) The customer service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic.
+            sink_name: (String) The unique name of the audit log sink, it can't be changed once set.
+            timeouts: (Block, Optional) (see below for nested schema)
+            topic_name: (String) The destination PubSub topic name for Temporal.
+        importStatements: []
+    temporalcloud_apikey:
+        subCategory: ""
+        description: Provisions a Temporal Cloud API key.
+        name: temporalcloud_apikey
+        title: temporalcloud_apikey Resource - terraform-provider-temporalcloud
+        examples:
+            - name: global_apikey
+              manifest: |-
+                {
+                  "disabled": false,
+                  "display_name": "admin",
+                  "expiry_time": "2024-11-01T00:00:00Z",
+                  "owner_id": "${temporalcloud_service_account.global_service_account.id}",
+                  "owner_type": "service-account"
+                }
+              references:
+                owner_id: temporalcloud_service_account.global_service_account.id
+              dependencies:
+                temporalcloud_service_account.global_service_account: |-
+                    {
+                      "account_access": "Admin",
+                      "name": "admin"
+                    }
+        argumentDocs:
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            description: (String) The description for the API key.
+            disabled: (Boolean) Whether the API key is disabled.
+            display_name: (String) The display name for the API key.
+            expiry_time: (String) The expiry time for the API key in ISO 8601 format.
+            id: (String) The unique identifier of the API key.
+            owner_id: (String) The ID of the owner to create the API key for.
+            owner_type: (String) The type of the owner to create the API key.
+            state: (String) The current state of the API key.
+            timeouts: (Block, Optional) (see below for nested schema)
+            token: (String, Sensitive) The token for the API key. This field is populated with the full key when creating an API key. To retrieve the value of this field, use an output.tf file and follow Terraform's guidance on working with sensitive fields.
+        importStatements: []
+    temporalcloud_connectivity_rule:
+        subCategory: ""
+        description: Provisions a Temporal Cloud Connectivity Rule.
+        name: temporalcloud_connectivity_rule
+        title: temporalcloud_connectivity_rule Resource - terraform-provider-temporalcloud
+        examples:
+            - name: public_rule
+              manifest: |-
+                {
+                  "connectivity_type": "public"
+                }
+              dependencies:
+                temporalcloud_namespace.ns-with-cr: |-
+                    {
+                      "api_key_auth": true,
+                      "connectivity_rule_ids": [
+                        "${public_rule.id}",
+                        "${private_aws.id}"
+                      ],
+                      "name": "ns-with-cr",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: public_rule_stable_ips
+              manifest: |-
+                {
+                  "connectivity_type": "public",
+                  "enable_stable_ips": true
+                }
+              dependencies:
+                temporalcloud_namespace.ns-with-cr: |-
+                    {
+                      "api_key_auth": true,
+                      "connectivity_rule_ids": [
+                        "${public_rule.id}",
+                        "${private_aws.id}"
+                      ],
+                      "name": "ns-with-cr",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: private_aws
+              manifest: |-
+                {
+                  "connection_id": "vpce-12345678",
+                  "connectivity_type": "private",
+                  "region": "aws-us-west-2"
+                }
+              dependencies:
+                temporalcloud_namespace.ns-with-cr: |-
+                    {
+                      "api_key_auth": true,
+                      "connectivity_rule_ids": [
+                        "${public_rule.id}",
+                        "${private_aws.id}"
+                      ],
+                      "name": "ns-with-cr",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: private_gcp
+              manifest: |-
+                {
+                  "connection_id": "vpce-12345678",
+                  "connectivity_type": "private",
+                  "gcp_project_id": "my-gcp-project-id",
+                  "region": "gcp-us-central1"
+                }
+              dependencies:
+                temporalcloud_namespace.ns-with-cr: |-
+                    {
+                      "api_key_auth": true,
+                      "connectivity_rule_ids": [
+                        "${public_rule.id}",
+                        "${private_aws.id}"
+                      ],
+                      "name": "ns-with-cr",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            connection_id: (String) The connection ID of the private connection.
+            connectivity_type: (String) The type of connectivity. Must be one of 'public' or 'private'.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            enable_stable_ips: (Boolean) If true, namespaces attached to this public connectivity rule will be reachable via a predictable set of public IPs. Only applies when connectivity_type is 'public'.
+            gcp_project_id: (String) The GCP project ID. Required when cloud_provider is 'gcp'.
+            id: (String) The unique identifier of the Connectivity Rule.
+            region: '(String) The region of the connection. Example: ''aws-us-west-2''.'
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements: []
+    temporalcloud_custom_role:
+        subCategory: ""
+        description: Provisions a Temporal Cloud custom role.
+        name: temporalcloud_custom_role
+        title: temporalcloud_custom_role Resource - terraform-provider-temporalcloud
+        examples:
+            - name: example_custom_role
+              manifest: |-
+                {
+                  "description": "Example custom role created with Terraform.",
+                  "name": "terraform-example-custom-role",
+                  "permissions": [
+                    {
+                      "actions": [
+                        "cloud.account.get"
+                      ],
+                      "resources": {
+                        "allow_all": true,
+                        "resource_ids": [],
+                        "resource_type": "account"
+                      }
+                    }
+                  ]
+                }
+        argumentDocs:
+            actions: (Set of String) The actions allowed by this permission.
+            allow_all: (Boolean) Whether this permission applies to all resources of the given type. If true, resource_ids must be empty.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            description: (String) The description of the custom role.
+            id: (String) The unique identifier of the custom role.
+            name: (String) The name of the custom role.
+            permissions: (Attributes List) The permissions assigned to the custom role. (see below for nested schema)
+            resource_ids: (Set of String) The resource IDs this permission applies to. If empty, allow_all must be true.
+            resource_type: (String) The resource type this permission applies to.
+            resources: (Attributes) The resources this permission applies to. (see below for nested schema)
+            state: (String) The current state of the custom role.
+            timeouts: (Block, Optional) (see below for nested schema)
+            update: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+        importStatements: []
+    temporalcloud_group:
+        subCategory: ""
+        description: Provisions a Temporal Cloud User Group.
+        name: temporalcloud_group
+        title: temporalcloud_group Resource - terraform-provider-temporalcloud
+        examples:
+            - name: namespace_admin_group
+              manifest: |-
+                {
+                  "name": "developers"
+                }
+              dependencies:
+                temporalcloud_group_access.namespace_admin_group_access: |-
+                    {
+                      "account_access": "developer",
+                      "id": "${temporalcloud_group.namespace_admin_group.id}",
+                      "namespace_accesses": [
+                        {
+                          "namespace_id": "${temporalcloud_namespace.namespace.id}",
+                          "permission": "admin"
+                        }
+                      ]
+                    }
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            id: (String) The unique identifier of the group.
+            name: (String) The name of the group
+            state: (String) The current state of the group.
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements:
+            - |-
+              # Groups can be imported to incorporate existing Groups into your Terraform pipeline.
+              # To import a Group, you need
+              # - a resource configuration in your Terraform configuration file/module to accept the imported Group. In the example below, the placeholder is "temporalcloud_group" "group"
+              # - the Group's ID, which is found using the Temporal Cloud CLI tcld g l. In the example below, this is 72360058153949edb2f1d47019c1e85f
+
+              terraform import temporalcloud_group.group 72360058153949edb2f1d47019c1e85f
+    temporalcloud_group_access:
+        subCategory: ""
+        description: Provisions Temporal Cloud group access.
+        name: temporalcloud_group_access
+        title: temporalcloud_group_access Resource - terraform-provider-temporalcloud
+        examples:
+            - name: my_group_access
+              manifest: |-
+                {
+                  "account_access": "read",
+                  "id": "${temporalcloud_scim_group.my_scim_group.id}",
+                  "namespace_accesses": [
+                    {
+                      "namespace_id": "${temporalcloud_namespace.test.id}",
+                      "permission": "write"
+                    }
+                  ]
+                }
+              references:
+                id: temporalcloud_scim_group.my_scim_group.id
+              dependencies:
+                temporalcloud_namespace.test: |-
+                    {
+                      "api_key_auth": true,
+                      "name": "my-namespace",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 7
+                    }
+        argumentDocs:
+            account_access: (String) The role on the account. Must be one of owner, admin, developer, none, or read (case-insensitive). owner is only valid for import and cannot be created, updated or deleted without Temporal support. none is only valid for users managed via SCIM that derive their roles from group memberships or for group access resources.
+            account_access_custom_roles: (Set of String) The set of custom role IDs assigned within account_access in addition to the built-in account_access role. Empty sets are not allowed, omit the attribute instead.
+            id: (String) The unique identifier of the group access across all Temporal Cloud tenants.
+            namespace_accesses: (Attributes Set) The set of namespace accesses. Empty sets are not allowed, omit the attribute instead. Users with account_access roles of owner or admin cannot be assigned explicit permissions to namespaces. They implicitly receive access to all Namespaces. (see below for nested schema)
+            namespace_id: (String) The namespace to assign permissions to.
+            permission: (String) The permission to assign. Must be one of admin, write, or read (case-insensitive)
+        importStatements: []
+    temporalcloud_group_members:
+        subCategory: ""
+        description: Sets Group Membership for the provided Group ID. Only use one per group.
+        name: temporalcloud_group_members
+        title: temporalcloud_group_members Resource - terraform-provider-temporalcloud
+        examples:
+            - name: admin_group_members
+              manifest: |-
+                {
+                  "group_id": "${temporalcloud_group.admin_group.id}",
+                  "users": [
+                    "${temporalcloud_user.reader.id}"
+                  ]
+                }
+              references:
+                group_id: temporalcloud_group.admin_group.id
+                users: temporalcloud_user.reader.id
+              dependencies:
+                temporalcloud_group.admin_group: |-
+                    {
+                      "name": "admins"
+                    }
+                temporalcloud_group_access.admin_group_access: |-
+                    {
+                      "account_access": "admin",
+                      "group_id": "${temporalcloud_group.admin_group.id}"
+                    }
+                temporalcloud_user.reader: |-
+                    {
+                      "account_access": "reader",
+                      "email": "reader@yourdomain.com"
+                    }
+        argumentDocs:
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            group_id: (String) The Group ID to set the members for.
+            id: (String) The unique identifier of the group.
+            timeouts: (Block, Optional) (see below for nested schema)
+            users: (Set of String) The users to add to the group.
+        importStatements:
+            - |-
+              # Group Members can be imported to incorporate existing Group Memberships into your Terraform pipeline.
+              # To import Group Members, you need
+              # - a resource configuration in your Terraform configuration file/module to accept the imported Group Members. In the example below, the placeholder is "temporalcloud_group_members" "group"
+              # - the Group's ID, which is found using the Temporal Cloud CLI tcld g l. In the example below, this is 72360058153949edb2f1d47019c1e85f
+
+              terraform import temporalcloud_group_members.group 72360058153949edb2f1d47019c1e85f
+    temporalcloud_metrics_endpoint:
+        subCategory: ""
+        description: Configures a Temporal Cloud account's metrics endpoint for the PromQL query API. !> Deprecated. The PromQL metrics endpoint was deprecated on April 2, 2026 and is no longer accepting new users. It will be disabled on October 5, 2026. Migrate to the OpenMetrics endpoint https://docs.temporal.io/cloud/metrics/openmetrics/migration-guide instead. See the temporalcloud_service_account https://registry.terraform.io/providers/temporalio/temporalcloud/latest/docs/resources/service_account resource for an example of setting up OpenMetrics with Terraform.
+        name: temporalcloud_metrics_endpoint
+        title: temporalcloud_metrics_endpoint Resource - terraform-provider-temporalcloud
+        examples:
+            - name: terraform
+              manifest: |-
+                {
+                  "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}"
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}"
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_self_signed_cert.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": 8760
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "validity_period_hours": 8760
+                    }
+            - name: terraform2
+              manifest: |-
+                {
+                  "accepted_client_ca": "${base64encode(tls_self_signed_cert.ca.cert_pem)}"
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}"
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_self_signed_cert.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": 8760
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "validity_period_hours": 8760
+                    }
+        argumentDocs:
+            accepted_client_ca: (String) The Base64-encoded CA cert in PEM format used to authenticate clients connecting to the metrics endpoint.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            id: (String) A unique identifier for the account's metrics configuration. Always account-ACCOUNT_ID-metrics.
+            timeouts: (Block, Optional) (see below for nested schema)
+            update: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            uri: (String) The Prometheus metrics endpoint URI
+        importStatements:
+            - terraform import temporalcloud_metrics_endpoint.terraform terraform.account-11111-metrics
+    temporalcloud_namespace:
+        subCategory: ""
+        description: 'Provisions a Temporal Cloud namespace. Regions available in Temporal Cloud: https://docs.temporal.io/cloud/regions. Note that regions are prefixed with the cloud provider (aws-us-east-1, not us-east-1)'
+        name: temporalcloud_namespace
+        title: temporalcloud_namespace Resource - terraform-provider-temporalcloud
+        examples:
+            - name: terraform
+              manifest: |-
+                {
+                  "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                  "name": "terraform",
+                  "namespace_lifecycle": {
+                    "enable_delete_protection": true
+                  },
+                  "regions": [
+                    "aws-us-east-1"
+                  ],
+                  "retention_days": 14
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ]
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": "${var.certificate_expiration_hours}"
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ],
+                      "validity_period_hours": 8760
+                    }
+            - name: terraform2
+              manifest: |-
+                {
+                  "accepted_client_ca": "${base64encode(tls_self_signed_cert.ca.cert_pem)}",
+                  "name": "terraform2",
+                  "namespace_lifecycle": {
+                    "enable_delete_protection": true
+                  },
+                  "regions": [
+                    "aws-us-east-1"
+                  ],
+                  "retention_days": 14
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ]
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": "${var.certificate_expiration_hours}"
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ],
+                      "validity_period_hours": 8760
+                    }
+            - name: terraform3
+              manifest: |-
+                {
+                  "api_key_auth": true,
+                  "name": "terraform3",
+                  "namespace_lifecycle": {
+                    "enable_delete_protection": true
+                  },
+                  "regions": [
+                    "aws-us-east-1"
+                  ],
+                  "retention_days": 14
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ]
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": "${var.certificate_expiration_hours}"
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ],
+                      "validity_period_hours": 8760
+                    }
+            - name: terraform4
+              manifest: |-
+                {
+                  "accepted_client_ca": "${base64encode(tls_self_signed_cert.ca.cert_pem)}",
+                  "connectivity_rule_ids": [
+                    "0f806bg8-fe63-461c-81b3-17e3tcb0574b"
+                  ],
+                  "name": "terraform4",
+                  "regions": [
+                    "aws-us-east-1"
+                  ],
+                  "retention_days": 14
+                }
+              dependencies:
+                tls_cert_request.default: |-
+                    {
+                      "dns_names": [],
+                      "private_key_pem": "${tls_private_key.default.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ]
+                    }
+                tls_locally_signed_cert.default: |-
+                    {
+                      "allowed_uses": [
+                        "client_auth",
+                        "digital_signature"
+                      ],
+                      "ca_cert_pem": "${tls_self_signed_cert.ca.cert_pem}",
+                      "ca_private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "cert_request_pem": "${tls_cert_request.default.cert_request_pem}",
+                      "is_ca_certificate": false,
+                      "validity_period_hours": "${var.certificate_expiration_hours}"
+                    }
+                tls_private_key.default: |-
+                    {
+                      "algorithm": "RSA"
+                    }
+                tls_self_signed_cert.ca: |-
+                    {
+                      "allowed_uses": [
+                        "cert_signing",
+                        "server_auth",
+                        "client_auth"
+                      ],
+                      "is_ca_certificate": true,
+                      "private_key_pem": "${tls_private_key.ca.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "${format(\"%s-%s.%s\", \"terraform2\", [\"aws-us-east-1\"], \"terraform\")}",
+                          "organization": "terraform"
+                        }
+                      ],
+                      "validity_period_hours": 8760
+                    }
+        argumentDocs:
+            accepted_client_ca: (String) The Base64-encoded CA cert in PEM format that clients use when authenticating with Temporal Cloud. This is a required field when a Namespace uses mTLS authentication.
+            api_key_auth: (Boolean) If true, Temporal Cloud will enable API key authentication for this namespace.
+            capacity: (Attributes) The capacity configuration for the namespace. (see below for nested schema)
+            certificate_filters: (Attributes List) A list of filters to apply to client certificates when initiating a connection Temporal Cloud. If present, connections will only be allowed from client certificates whose distinguished name properties match at least one of the filters. Empty lists are not allowed, omit the attribute instead. (see below for nested schema)
+            codec_server: (Attributes) A codec server is used by the Temporal Cloud UI to decode payloads for all users interacting with this namespace, even if the workflow history itself is encrypted. (see below for nested schema)
+            common_name: (String) The certificate's common name.
+            connectivity_rule_ids: (Set of String) The IDs of the connectivity rules for this namespace.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            custom_error_link: (String) A link displayed alongside the custom error message for the codec server.
+            custom_error_message: (String) A custom error message to display when the codec server returns an error.
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            enable_delete_protection: (Boolean) If true, the namespace cannot be deleted. This is a safeguard against accidental deletion. To delete a namespace with this option enabled, you must first set it to false.
+            endpoint: (String) The endpoint of the codec server. Must begin with "https".
+            endpoints: (Attributes) The endpoints for the namespace. (see below for nested schema)
+            fairness: (Attributes) The fairness configuration for the namespace. (see below for nested schema)
+            grpc_address: (String) The gRPC address for API key client connections (may be empty if API keys are disabled).
+            id: (String) The unique identifier of the namespace across all Temporal Cloud tenants.
+            include_cross_origin_credentials: (Boolean) If true, Temporal Cloud will include cross-origin credentials in requests to the codec server.
+            mode: (String) The mode of the capacity configuration. Must be one of 'provisioned' or 'on_demand'.
+            mtls_grpc_address: (String) The gRPC address for mTLS client connections (may be empty if mTLS is disabled).
+            name: (String) The name of the namespace. Must be 2-64 characters, start with a letter, contain only lowercase letters, numbers, and hyphens, and not end with a hyphen.
+            namespace_lifecycle: (Attributes) The lifecycle configuration for the namespace. Note that this is different from the Terraform resource lifecycle. This controls settings like delete protection within Temporal Cloud. (see below for nested schema)
+            organization: (String) The certificate's organization.
+            organizational_unit: (String) The certificate's organizational unit.
+            pass_access_token: (Boolean) If true, Temporal Cloud will pass the access token to the codec server upon each request.
+            regions: (List of String) The list of regions where this namespace is available. Must be one or two regions. See https://docs.temporal.io/cloud/regions for a list of available regions and HA options. Note that regions are prefixed with the cloud provider (aws-us-east-1, not us-east-1). If two regions are specified, the namespace will be replicated across them in a high availability (HA) configuration. Same-region, multi-region, and multi-cloud HA namespaces are supported. Please note that changing, adding, or removing regions for an existing namespace is not currently supported and the provider will throw an error. For HA namespaces the provider will ignore order changes on regions, which can happen if the namespace fails over.
+            retention_days: (Number) The number of days to retain workflow history. Any changes to the retention period will be applied to all new running workflows.
+            subject_alternative_name: (String) The certificate's subject alternative name (or SAN).
+            task_queue_fairness_enabled: (Boolean) Flag to enable task queue fairness for the namespace. Defaults to disabled.
+            timeouts: (Block, Optional) (see below for nested schema)
+            value: (Number) The value of the capacity configuration. Must be set when mode is 'provisioned'.
+            web_address: (String) The address in the Temporal Cloud Web UI for the namespace
+        importStatements:
+            - "# Namespace can be imported to incorporate existing Namespaces into your Terraform pipeline. \n# To import a Namespace, you need\n# - a resource configuration in your Terraform configuration file/module to accept the imported Namespace. In the example below, the placeholder is \"temporalcloud_namespace\" \"terraform\"\n# - the Namespace ID, which includes the Namespace Name and Account ID available at the top of the Namespace's page in the Temporal Cloud UI. In the example below, this is namespaceid.acctid\n\nterraform import temporalcloud_namespace.terraform namespaceid.acctid"
+    temporalcloud_namespace_export_sink Resource - terraform-provider-temporalcloud:
+        subCategory: ""
+        description: Provisions a namespace export sink.
+        name: temporalcloud_namespace_export_sink Resource - terraform-provider-temporalcloud
+        title: temporalcloud_namespace_export_sink Resource - terraform-provider-temporalcloud
+        argumentDocs:
+            aws_account_id: (String) The AWS account ID associated with the S3 bucket and the assumed role.
+            bucket_name: (String) The name of the destination GCS bucket where Temporal will send data.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            enabled: (Boolean) A flag indicating whether the export sink is enabled or not.
+            gcp_project_id: (String) The GCP project ID associated with the GCS bucket and service account. If not provided, the service_account_email must be provided.
+            gcs: (Attributes) The GCS configuration details when destination_type is GCS. (see below for nested schema)
+            id: (String) The unique identifier of the namespace export sink.
+            kms_arn: (String) The AWS Key Management Service (KMS) ARN used for encryption.
+            namespace: (String) The namespace under which the sink is configured, formatted as <namespace>.<account_id>
+            region: (String) The region of the gcs bucket
+            role_name: (String) The IAM role that Temporal Cloud assumes for writing records to the customer's S3 bucket.
+            s3: (Attributes) The S3 configuration details when destination_type is S3. (see below for nested schema)
+            service_account_email: (String) The service account email associated with the GCS bucket and service account. If not provided, the service_account_id and gcp_project_id must be provided.
+            service_account_id: (String) The customer service account ID that Temporal Cloud impersonates for writing records to the customer's GCS bucket. If not provided, the service_account_email must be provided.
+            sink_name: (String) The unique name of the export sink, it can't be changed once set.
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements: []
+    temporalcloud_namespace_search_attribute:
+        subCategory: ""
+        description: Create a search attribute https://docs.temporal.io/visibility#search-attribute in a Temporal Cloud namespace https://registry.terraform.io/providers/temporalio/temporalcloud/latest/docs/resources/namespace. Note the limits on quantity https://docs.temporal.io/cloud/limits#number-of-custom-search-attributes and naming https://docs.temporal.io/cloud/limits#custom-search-attribute-names.
+        name: temporalcloud_namespace_search_attribute
+        title: temporalcloud_namespace_search_attribute Resource - terraform-provider-temporalcloud
+        examples:
+            - name: custom_search_attribute
+              manifest: |-
+                {
+                  "name": "CustomSearchAttribute",
+                  "namespace_id": "${temporalcloud_namespace.terraform.id}",
+                  "type": "Text"
+                }
+              references:
+                namespace_id: temporalcloud_namespace.terraform.id
+              dependencies:
+                temporalcloud_namespace.terraform: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform-with-search-attributes",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: custom_search_attribute2
+              manifest: |-
+                {
+                  "name": "CustomSearchAttribute2",
+                  "namespace_id": "${temporalcloud_namespace.terraform.id}",
+                  "type": "Text"
+                }
+              references:
+                namespace_id: temporalcloud_namespace.terraform.id
+              dependencies:
+                temporalcloud_namespace.terraform: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform-with-search-attributes",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: custom_search_attribute3
+              manifest: |-
+                {
+                  "name": "CustomSearchAttribute3",
+                  "namespace_id": "${temporalcloud_namespace.terraform.id}",
+                  "type": "Text"
+                }
+              references:
+                namespace_id: temporalcloud_namespace.terraform.id
+              dependencies:
+                temporalcloud_namespace.terraform: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform-with-search-attributes",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            id: (String) The ID of this search attribute.
+            name: (String) The name of the search attribute.
+            namespace_id: (String) The ID of the namespace to which this search attribute belongs.
+            type: (String) The type of the search attribute. Must be one of bool, datetime, double, int, keyword, keyword_list or text. (case-insensitive)
+        importStatements:
+            - "# Search Attributes can be imported to incorporate existing Namespace Search Attributes into your Terraform pipeline. \n# To import a Search Attribute, you need\n# - a resource configuration in your Terraform configuration file/module to accept the imported Search Attribute. In the example below, the placeholder is \"temporalcloud_namespace_search_attribute\" \"saimport\"\n# - the Namespace ID, which includes the Namespace Name and Account ID available at the top of the Namespace's page in the Temporal Cloud UI. In the example below, this is namespaceid.acctid\n# - the name of the Search Attribute, which is available in the Search Attribute configuration of Namespace's page in the Temporal Cloud UI. In the example below, this is searchAttr\n\n\nterraform import temporalcloud_namespace_search_attribute.saimport namespaceid.acctid/searchAttr"
+    temporalcloud_namespace_tags:
+        subCategory: ""
+        description: Manages the complete set of tags for a Temporal Cloud namespace.
+        name: temporalcloud_namespace_tags
+        title: temporalcloud_namespace_tags Resource - terraform-provider-temporalcloud
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "namespace_id": "${temporalcloud_namespace.example.id}",
+                  "tags": {
+                    "environment": "production",
+                    "project": "temporal-workflows",
+                    "team": "backend"
+                  },
+                  "timeouts": [
+                    {
+                      "create": "10m",
+                      "delete": "5m"
+                    }
+                  ]
+                }
+              references:
+                namespace_id: temporalcloud_namespace.example.id
+              dependencies:
+                temporalcloud_namespace.example: |-
+                    {
+                      "api_key_auth": true,
+                      "name": "example-namespace",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            id: (String) The ID of this namespace tags resource.
+            namespace_id: (String) The ID of the namespace to manage tags for.
+            tags: (Map of String) A map of tag keys to tag values.
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements:
+            - |-
+              # Namespace Tags can be imported to incorporate existing Namespace Tags into your Terraform pipeline.
+              # To import Namespace Tags, you need:
+              # - a resource configuration in your Terraform configuration file/module to accept the imported Namespace Tags. In the example below, the placeholder is "temporalcloud_namespace_tags" "tags_import"
+              # - the Namespace ID, which includes the Namespace Name and Account ID available at the top of the Namespace's page in the Temporal Cloud UI. In the example below, this is namespaceid.acctid
+              # The import ID format is: namespaceid.acctid/tags
+
+              terraform import temporalcloud_namespace_tags.tags_import namespaceid.acctid/tags
+    temporalcloud_nexus_endpoint:
+        subCategory: ""
+        description: Provisions a Temporal Cloud Nexus endpoint.
+        name: temporalcloud_nexus_endpoint
+        title: temporalcloud_nexus_endpoint Resource - terraform-provider-temporalcloud
+        examples:
+            - name: nexus_endpoint
+              manifest: |-
+                {
+                  "allowed_caller_namespaces": [
+                    "${temporalcloud_namespace.caller_namespace.id}",
+                    "${temporalcloud_namespace.caller_namespace_2.id}"
+                  ],
+                  "description": "Service Name:\n  my-hello-service\nOperation Names:\n  echo\n  say-hello\n\nInput / Output arguments are in the following repository:\nhttps://github.com/temporalio/samples-go/blob/main/nexus/service/api.go\n",
+                  "name": "terraform-nexus-endpoint",
+                  "worker_target": {
+                    "namespace_id": "${temporalcloud_namespace.target_namespace.id}",
+                    "task_queue": "terraform-task-queue"
+                  }
+                }
+              references:
+                allowed_caller_namespaces: temporalcloud_namespace.caller_namespace.id
+              dependencies:
+                temporalcloud_namespace.caller_namespace: |-
+                    {
+                      "api_key_auth": true,
+                      "name": "terraform-caller-namespace",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14,
+                      "timeouts": [
+                        {
+                          "create": "10m",
+                          "delete": "10m"
+                        }
+                      ]
+                    }
+                temporalcloud_namespace.caller_namespace_2: |-
+                    {
+                      "api_key_auth": true,
+                      "name": "terraform-caller-namespace-2",
+                      "regions": [
+                        "gcp-us-central1"
+                      ],
+                      "retention_days": 14,
+                      "timeouts": [
+                        {
+                          "create": "10m",
+                          "delete": "10m"
+                        }
+                      ]
+                    }
+                temporalcloud_namespace.target_namespace: |-
+                    {
+                      "api_key_auth": true,
+                      "name": "terraform-target-namespace",
+                      "regions": [
+                        "aws-us-west-2"
+                      ],
+                      "retention_days": 14,
+                      "timeouts": [
+                        {
+                          "create": "10m",
+                          "delete": "10m"
+                        }
+                      ]
+                    }
+        argumentDocs:
+            allowed_caller_namespaces: (Set of String) Namespace Id(s) that are allowed to call this Endpoint.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            description: (String, Sensitive) The description for the Nexus endpoint.
+            id: (String) The unique identifier of the Nexus endpoint.
+            name: (String) The name of the endpoint. Must be unique within an account and match ^[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9]$
+            namespace_id: (String) The target cloud namespace to route requests to. Namespace must be in same account as the endpoint.
+            task_queue: (String) The task queue on the cloud namespace to route requests to.
+            timeouts: (Block, Optional) (see below for nested schema)
+            worker_target: (Attributes) A target spec for routing nexus requests to a specific cloud namespace worker. (see below for nested schema)
+        importStatements:
+            - "# Nexus Endpoints can be imported to incorporate existing Nexus Endpoints into your Terraform pipeline. \n# To import a Nexus Endpoint, you need\n# - a resource configuration in your Terraform configuration file/module to accept the imported Nexus Endpoint. In the example below, the placeholder is \"temporalcloud_nexus_endpoint\" \"nexus_endpoint\"\n# - the Nexus Endpoint's ID, which is found using the Temporal Cloud CLI tcld nexus endpoint list. In the example below, this is 405f7da4224a43d99c211904ed9b3819\n\nterraform import temporalcloud_nexus_endpoint.nexus_endpoint 405f7da4224a43d99c211904ed9b3819"
+    temporalcloud_service_account:
+        subCategory: ""
+        description: Provisions a Temporal Cloud Service Account.
+        name: temporalcloud_service_account
+        title: temporalcloud_service_account Resource - terraform-provider-temporalcloud
+        examples:
+            - name: global_service_account
+              manifest: |-
+                {
+                  "account_access": "admin",
+                  "name": "admin"
+                }
+              dependencies:
+                temporalcloud_apikey.metrics: |-
+                    {
+                      "disabled": false,
+                      "display_name": "metrics-scraper",
+                      "expiry_time": "2027-11-01T00:00:00Z",
+                      "owner_id": "${temporalcloud_service_account.metrics.id}",
+                      "owner_type": "service-account"
+                    }
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: namespace_admin
+              manifest: |-
+                {
+                  "account_access": "developer",
+                  "name": "developer",
+                  "namespace_accesses": [
+                    {
+                      "namespace_id": "${temporalcloud_namespace.namespace.id}",
+                      "permission": "admin"
+                    }
+                  ]
+                }
+              dependencies:
+                temporalcloud_apikey.metrics: |-
+                    {
+                      "disabled": false,
+                      "display_name": "metrics-scraper",
+                      "expiry_time": "2027-11-01T00:00:00Z",
+                      "owner_id": "${temporalcloud_service_account.metrics.id}",
+                      "owner_type": "service-account"
+                    }
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: metrics
+              manifest: |-
+                {
+                  "account_access": "metricsread",
+                  "name": "metrics-scraper"
+                }
+              dependencies:
+                temporalcloud_apikey.metrics: |-
+                    {
+                      "disabled": false,
+                      "display_name": "metrics-scraper",
+                      "expiry_time": "2027-11-01T00:00:00Z",
+                      "owner_id": "${temporalcloud_service_account.metrics.id}",
+                      "owner_type": "service-account"
+                    }
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            account_access: (String) The role on the account. Must be one of admin, developer, read, or metricsread (case-insensitive). Cannot be set if namespace_scoped_access is provided.
+            account_access_custom_roles: (Set of String) The set of custom role IDs assigned within account_access in addition to the built-in account_access role. Empty sets are not allowed, omit the attribute instead. Cannot be set if namespace_scoped_access is provided.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            description: (String) The description for the service account.
+            id: (String) The unique identifier of the Service Account.
+            name: (String) The name associated with the service account.
+            namespace_accesses: (Attributes Set) The set of namespace accesses. Empty sets are not allowed, omit the attribute instead. Service Accounts with an account_access role of admin cannot be assigned explicit permissions to namespaces. Admins implicitly receive access to all Namespaces. Cannot be set if namespace_scoped_access is provided. (see below for nested schema)
+            namespace_id: (String) The namespace to assign permissions to.
+            namespace_scoped_access: (Attributes) Configures this service account as a namespace-scoped service account with access to only a single namespace. The namespace assignment is immutable after creation. Cannot be set if account_access, account_access_custom_roles, or namespace_accesses are provided. (see below for nested schema)
+            permission: (String) The permission to assign. Must be one of admin, write, or read (case-insensitive)
+            state: (String) The current state of the Service Account.
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements:
+            - "# Service Accounts can be imported to incorporate existing Service Accounts into your Terraform pipeline. \n# To import a Service Account, you need\n# - a resource configuration in your Terraform configuration file/module to accept the imported Service Account. In the example below, the placeholder is \"temporalcloud_service_account\" \"saimport\"\n# - the Service Accounts's ID, which is found using the Temporal Cloud CLI tcld sa l. In the example below, this is e3cb94fbdbb845f480044d053d00665b\n\nterraform import temporalcloud_service_account.saimport e3cb94fbdbb845f480044d053d00665b"
+    temporalcloud_user:
+        subCategory: ""
+        description: Provisions a Temporal Cloud user.
+        name: temporalcloud_user
+        title: temporalcloud_user Resource - terraform-provider-temporalcloud
+        examples:
+            - name: global_admin
+              manifest: |-
+                {
+                  "account_access": "admin",
+                  "email": "admin@yourdomain.com"
+                }
+              dependencies:
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+            - name: namespace_admin
+              manifest: |-
+                {
+                  "account_access": "developer",
+                  "email": "developer@yourdomain.com",
+                  "namespace_accesses": [
+                    {
+                      "namespace_id": "${temporalcloud_namespace.namespace.id}",
+                      "permission": "admin"
+                    }
+                  ]
+                }
+              dependencies:
+                temporalcloud_namespace.namespace: |-
+                    {
+                      "accepted_client_ca": "${base64encode(file(\"${path.module}/ca.pem\"))}",
+                      "name": "terraform",
+                      "regions": [
+                        "aws-us-east-1"
+                      ],
+                      "retention_days": 14
+                    }
+        argumentDocs:
+            account_access: (String) The role on the account. Must be one of owner, admin, developer, read, financeadmin, or metricsread (case-insensitive). owner is only valid for import and cannot be created, updated or deleted without Temporal support. none is only valid for users managed via SCIM that derive their roles from group memberships.
+            account_access_custom_roles: (Set of String) The set of custom role IDs assigned within account_access in addition to the built-in account_access role. Empty sets are not allowed, omit the attribute instead.
+            create: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+            delete: (String) A string that can be parsed as a duration consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+            email: (String) The email address for the user.
+            id: (String) The unique identifier of the user.
+            namespace_accesses: (Attributes Set) The set of namespace accesses. Empty sets are not allowed, omit the attribute instead. Users with account_access roles of owner or admin cannot be assigned explicit permissions to namespaces. They implicitly receive access to all Namespaces. (see below for nested schema)
+            namespace_id: (String) The namespace to assign permissions to.
+            permission: (String) The permission to assign. Must be one of admin, write, or read (case-insensitive)
+            state: (String) The current state of the user.
+            timeouts: (Block, Optional) (see below for nested schema)
+        importStatements:
+            - "# Users can be imported to incorporate existing Users into your Terraform pipeline. \n# To import a User, you need\n# - a resource configuration in your Terraform configuration file/module to accept the imported User. In the example below, the placeholder is \"temporalcloud_user\" \"user\"\n# - the User's ID, which is found using the Temporal Cloud CLI tcld u l. In the example below, this is 72360058153949edb2f1d47019c1e85f\n\nterraform import temporalcloud_user.user 72360058153949edb2f1d47019c1e85f"

@@ -1,0 +1,13 @@
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-temporalcloud
+  annotations:
+    meta.crossplane.io/maintainer: Bitovi Platform
+    meta.crossplane.io/source: github.com/bitovi/provider-temporal
+    meta.crossplane.io/license: Apache-2.0
+    meta.crossplane.io/description: |
+      Upjet Crossplane provider for Temporal Cloud (generated from temporalio/temporalcloud).
+spec:
+  capabilities:
+    - SafeStart

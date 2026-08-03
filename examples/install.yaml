@@ -1,0 +1,11 @@
+# Install published package from Bitovi GHCR onto a Crossplane cluster.
+# Replace the tag after you publish (git tag vX.Y.Z + publish-ghcr workflow).
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-temporalcloud
+spec:
+  package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
+  # Uncomment if the GHCR package is private:
+  # packagePullSecrets:
+  #   - name: ghcr-pull

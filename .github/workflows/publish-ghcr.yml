@@ -1,0 +1,89 @@
+# Publish provider package to Bitovi GHCR (ghcr.io/bitovi/provider-temporalcloud).
+#
+# Crossplane installs from this OCI package — not from GitHub source alone.
+# The Upjet template originally pushed to crossplane-contrib / xpkg.crossplane.io;
+# this provider does not.
+
+name: Publish GHCR
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver tag to publish (e.g. v0.1.0). Leave empty to use git tag / VERSION."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: bitovi/provider-temporalcloud
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            V="${{ github.event.inputs.version }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            V="${GITHUB_REF#refs/tags/}"
+          else
+            V="$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)"
+          fi
+          # VERSION without leading v is conventional in some make targets; keep tag as-is for xpkg.
+          echo "VERSION=${V}" >> "$GITHUB_OUTPUT"
+          echo "Publishing as VERSION=${V}"
+
+      - name: Vendor modules
+        run: make vendor vendor.check
+
+      - name: Build linux packages and images
+        run: make -j2 build.all
+        env:
+          VERSION: ${{ steps.ver.outputs.VERSION }}
+          BUILD_ARGS: "--load"
+          REGISTRY_ORGS: ghcr.io/bitovi
+          XPKG_REG_ORGS: ghcr.io/bitovi
+
+      - name: Push package to GHCR
+        run: make publish.artifacts
+        env:
+          VERSION: ${{ steps.ver.outputs.VERSION }}
+          # makelib only wires publish.artifacts on main/release branches
+          BRANCH_NAME: main
+          REGISTRY_ORGS: ghcr.io/bitovi
+          XPKG_REG_ORGS: ghcr.io/bitovi

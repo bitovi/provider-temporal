@@ -1,0 +1,19 @@
+apiVersion: namespace.temporalcloud.m.bitovi.com/v1alpha1
+kind: Namespace
+metadata:
+  annotations:
+    meta.upbound.io/example-id: namespace/v1alpha1/namespace
+  labels:
+    testing.upbound.io/example-name: example-dev
+  name: example-dev
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: example-dev
+    regions:
+      - aws-us-east-1
+    retentionDays: 7
+    apiKeyAuth: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: default
