@@ -25,6 +25,11 @@ Cloud credentials you supply are separate questions.
 
 You still need a Temporal Cloud API key for managed resources to reconcile.
 
+## Architecture docs
+
+Reconcile / “who talks to Temporal” path: **[docs/control-plane-sync.md](docs/control-plane-sync.md)**  
+(Upjet-generated controllers + Terraform provider; not a hand-written Temporal client.)
+
 ---
 
 ## Install on a Crossplane cluster
@@ -37,23 +42,26 @@ You still need a Temporal Cloud API key for managed resources to reconcile.
 
 ### 2. Install the provider package
 
+You only need kubectl and a cluster with Crossplane — **no clone of this repo**.
+Replace the tag with a published version from GHCR
+(`ghcr.io/bitovi/provider-temporalcloud`).
+
 ```bash
-kubectl apply -f examples/install.yaml
-# or:
-# kubectl apply -f - <<'EOF'
-# apiVersion: pkg.crossplane.io/v1
-# kind: Provider
-# metadata:
-#   name: provider-temporalcloud
-# spec:
-#   package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
-# EOF
+kubectl apply -f - <<'EOF'
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-temporalcloud
+spec:
+  package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
+EOF
 
 kubectl get provider.pkg provider-temporalcloud -w
-# wait until HEALTHY / INSTALLED
+# wait until HEALTHY=True and INSTALLED=True
 ```
 
-**Private package (optional):**
+**Private package (optional):** create a pull secret, then install with
+`packagePullSecrets`:
 
 ```bash
 kubectl -n crossplane-system create secret docker-registry ghcr-pull \
@@ -61,11 +69,7 @@ kubectl -n crossplane-system create secret docker-registry ghcr-pull \
   --docker-username=YOUR_GITHUB_USER \
   --docker-password=YOUR_GITHUB_PAT_WITH_read:packages
 
-# Bind pull secret for packages (Crossplane version–specific; XP 1.14+ often uses
-# DeploymentRuntimeConfig or packagePullSecrets on the Provider):
-```
-
-```yaml
+kubectl apply -f - <<'EOF'
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
@@ -74,7 +78,11 @@ spec:
   package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
   packagePullSecrets:
     - name: ghcr-pull
+EOF
 ```
+
+If you already have this repository checked out, you can use
+`examples/install.yaml` instead of the heredoc.
 
 ### 3. Credentials + Namespace
 
