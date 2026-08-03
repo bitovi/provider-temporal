@@ -64,10 +64,13 @@ func extractAPIKey(data []byte) (string, error) {
 	if trimmed == "" {
 		return "", errors.New(errMissingAPIKey)
 	}
-	creds := map[string]string{}
-	if err := json.Unmarshal(data, &creds); err != nil {
-		// Secret may hold the raw Temporal Cloud API key (not JSON).
+	// Secret may hold either JSON credentials or a raw API key string.
+	if !json.Valid(data) {
 		return trimmed, nil
+	}
+	var creds map[string]string
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return "", errors.Wrap(err, errUnmarshalCredentials)
 	}
 	if v := creds["api_key"]; v != "" {
 		return v, nil

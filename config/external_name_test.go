@@ -8,7 +8,10 @@ import (
 )
 
 func TestAccountIDFromAPIKey(t *testing.T) {
-	payload, _ := json.Marshal(map[string]string{"account_id": "abc12"})
+	payload, err := json.Marshal(map[string]string{"account_id": "abc12"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	jwt := "hdr." + base64.RawURLEncoding.EncodeToString(payload) + ".sig"
 	if got := accountIDFromAPIKey(jwt); got != "abc12" {
 		t.Fatalf("got %q want abc12", got)
@@ -19,7 +22,10 @@ func TestAccountIDFromAPIKey(t *testing.T) {
 }
 
 func TestTemporalCloudNamespaceID(t *testing.T) {
-	payload, _ := json.Marshal(map[string]string{"account_id": "x72yu"})
+	payload, err := json.Marshal(map[string]string{"account_id": "x72yu"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	jwt := "hdr." + base64.RawURLEncoding.EncodeToString(payload) + ".sig"
 	params := map[string]any{"name": "my-local-dev"}
 
