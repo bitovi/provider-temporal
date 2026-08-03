@@ -15,11 +15,9 @@ Go module: `github.com/bitovi/provider-temporal`
 `Provider` object. Licensing of this repo (Apache-2.0 template) and Temporal
 Cloud credentials you supply are separate questions.
 
-- **Public** GHCR package (`ghcr.io/bitovi/provider-temporalcloud:<tag>`): any
-  cluster with network access can `kubectl apply` the Install manifest. No
-  pull secret required if the package visibility is public.
-- **Private** GHCR package: works the same, but the Crossplane package manager
-  needs a `packagePullSecrets` registry secret.
+- **Package visibility is independent of the GitHub repo.** GHCR packages often
+  stay **private** even when the source repo is public. Until the package is
+  marked public, clusters need a pull secret (`read:packages`).
 - Open-sourcing the **GitHub repo** does not by itself install the controller;
   clusters install from **GHCR** (or any registry you push to), not by cloning.
 
@@ -39,62 +37,80 @@ Reconcile / “who talks to Temporal” path: **[docs/control-plane-sync.md](doc
 - Kubernetes + Crossplane already running (any distribution)
 - kubectl context set to that cluster
 - A published package tag (see [Publish to GHCR](#publish-to-ghcr) if none exists yet)
+- [GitHub CLI](https://cli.github.com/) (`gh`) logged in with package pull access
+  (`read:packages` on an account that can read `ghcr.io/bitovi/provider-temporalcloud`)
 
-### 2. Install the provider package
+### 2. Install the provider package (private GHCR)
 
-You only need kubectl and a cluster with Crossplane — **no clone of this repo**.
-Replace the tag with a published version from GHCR
-(`ghcr.io/bitovi/provider-temporalcloud`).
+You only need kubectl + `gh` and a cluster with Crossplane — **no clone of this
+repo**. Replace the tag with a published version.
+
+Create (or refresh) a docker-registry secret from your current `gh` session token
+(no hard-coded PAT in the shell history beyond what `gh` already uses):
 
 ```bash
-kubectl apply -f - <<'EOF'
+export TAG=v0.1.0
+
+# Ensure package pull scope (re-auth if the token lacks read:packages)
+gh auth status
+# if needed:
+#   gh auth refresh -h github.com -s read:packages
+
+kubectl -n crossplane-system create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io \
+  --docker-username="$(gh api user --jq .login)" \
+  --docker-password="$(gh auth token)" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-temporalcloud
 spec:
-  package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
+  package: ghcr.io/bitovi/provider-temporalcloud:${TAG}
+  packagePullSecrets:
+    - name: ghcr-pull
 EOF
 
 kubectl get provider.pkg provider-temporalcloud -w
 # wait until HEALTHY=True and INSTALLED=True
 ```
 
-**Private package (optional):** create a pull secret, then install with
-`packagePullSecrets`:
+`gh api user --jq .login` is the GitHub username GHCR expects; `gh auth token`
+is the bearer token for that session. After the token rotates (logout / refresh),
+re-run the secret create/`apply` lines.
 
-```bash
-kubectl -n crossplane-system create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=YOUR_GITHUB_USER \
-  --docker-password=YOUR_GITHUB_PAT_WITH_read:packages
+If the package is later made **public**, you can drop `packagePullSecrets`
+and the secret step.
 
-kubectl apply -f - <<'EOF'
-apiVersion: pkg.crossplane.io/v1
-kind: Provider
-metadata:
-  name: provider-temporalcloud
-spec:
-  package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
-  packagePullSecrets:
-    - name: ghcr-pull
-EOF
-```
-
-If you already have this repository checked out, you can use
-`examples/install.yaml` instead of the heredoc.
+If you have this repository checked out, `examples/install.yaml` matches the
+private install (set `packagePullSecrets` as in that file).
 
 ### 3. Credentials + Namespace
 
+Namespaced objects live in a normal Kubernetes namespace first. Create that
+namespace, the credentials Secret, then the Crossplane objects:
+
 ```bash
 export API_KEY='your-temporal-cloud-api-key'
-kubectl create namespace temporal-cloud --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl -n temporal-cloud create secret generic temporal-cloud-creds \
-  --from-literal=credentials="{\"api_key\":\"${API_KEY}\"}" \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: temporal-cloud
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: temporal-cloud-creds
+  namespace: temporal-cloud
+type: Opaque
+stringData:
+  credentials: |
+    {"api_key":"${API_KEY}"}
+---
 apiVersion: temporalcloud.m.bitovi.com/v1beta1
 kind: ProviderConfig
 metadata:
@@ -130,7 +146,9 @@ EOF
 kubectl get namespace.namespace.temporalcloud.m.bitovi.com -n temporal-cloud -w
 ```
 
-Secret value may also be raw API key, or JSON with `TEMPORAL_CLOUD_API_KEY`.
+Note: Kubernetes `Namespace/temporal-cloud` is not the same kind as the Temporal
+Cloud MR `Namespace` (`namespace.temporalcloud.m.bitovi.com`). The first is a
+cluster namespace for packaging; the second is the managed Temporal resource.
 
 Examples: [`examples/namespaced/`](examples/namespaced/),
 [`examples/cluster/`](examples/cluster/) (cluster-scoped ProviderConfig + Namespace).
@@ -178,14 +196,15 @@ linux package + controller image (`make build.all`), then
 
 You can also run **Actions → Publish GHCR → Run workflow** and pass a version.
 
-After publish, make the package **public** in GitHub → Packages if you want
-anonymous cluster installs (org settings / package visibility).
+After publish, packages are usually **private** by default. Install with a
+`packagePullSecrets` secret via `gh auth token` (see [Install](#install-on-a-crossplane-cluster)).
+Optionally mark the package **public** in GitHub → Packages for anonymous pulls.
 
 ### From your laptop
 
 ```bash
 export VERSION=v0.1.0
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
+echo "$(gh auth token)" | docker login ghcr.io -u "$(gh api user --jq .login)" --password-stdin
 
 make build.all VERSION=$VERSION
 make publish.artifacts VERSION=$VERSION \
@@ -193,7 +212,7 @@ make publish.artifacts VERSION=$VERSION \
   XPKG_REG_ORGS=ghcr.io/bitovi
 ```
 
-Then install with `examples/install.yaml` pointing at that tag.
+Then install with the private path in the Install section (or `examples/install.yaml`).
 
 ### CI that does *not* publish
 

@@ -1,11 +1,17 @@
-# Install published package from Bitovi GHCR onto a Crossplane cluster.
+# Install published package from private Bitovi GHCR onto a Crossplane cluster.
 # Replace the tag after you publish (git tag vX.Y.Z + publish-ghcr workflow).
+#
+# Create the pull secret first (requires gh CLI logged in with read:packages):
+#   kubectl -n crossplane-system create secret docker-registry ghcr-pull \
+#     --docker-server=ghcr.io \
+#     --docker-username="$(gh api user --jq .login)" \
+#     --docker-password="$(gh auth token)" \
+#     --dry-run=client -o yaml | kubectl apply -f -
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-temporalcloud
 spec:
   package: ghcr.io/bitovi/provider-temporalcloud:v0.1.0
-  # Uncomment if the GHCR package is private:
-  # packagePullSecrets:
-  #   - name: ghcr-pull
+  packagePullSecrets:
+    - name: ghcr-pull
